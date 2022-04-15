@@ -72,9 +72,10 @@ public class WordStore implements Store<Word>, AutoCloseable {
         try (var statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, model.getValue());
             statement.executeUpdate();
-            var key = statement.getGeneratedKeys();
-            if (key.next()) {
-                model.setId(key.getInt(1));
+            try (var key = statement.getGeneratedKeys()) {
+                if (key.next()) {
+                    model.setId(key.getInt(1));
+                }
             }
         } catch (Exception e) {
             LOGGER.error("Не удалось выполнить операцию: { }", e.getCause());
@@ -89,12 +90,13 @@ public class WordStore implements Store<Word>, AutoCloseable {
         var sql = "select * from dictionary";
         var words = new ArrayList<Word>();
         try (var statement = connection.prepareStatement(sql)) {
-            var selection = statement.executeQuery();
-            while (selection.next()) {
-                words.add(new Word(
-                        selection.getInt("id"),
-                        selection.getString("word")
-                ));
+            try (var selection = statement.executeQuery()) {
+                while (selection.next()) {
+                    words.add(new Word(
+                            selection.getInt("id"),
+                            selection.getString("word")
+                    ));
+                }
             }
         } catch (Exception e) {
             LOGGER.error("Не удалось выполнить операцию: { }", e.getCause());
